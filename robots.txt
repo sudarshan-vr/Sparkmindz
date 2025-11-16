@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin.html
+Disallow: /admin-panel.html
+
+Sitemap: https://sparkmindz.com/sitemap.xml
