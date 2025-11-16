@@ -53,8 +53,22 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(session(sessionConfig));
 
-// Serve static files first
-app.use(express.static('.'));
+// Serve static files from the public directory
+app.use(express.static('public', { 
+  extensions: ['html', 'htm'],
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+    }
+  }
+}));
+
+// Serve index.html for the root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Special handling for admin-panel.html
 app.get('/admin-panel.html', (req, res, next) => {
@@ -118,22 +132,6 @@ app.post('/api/logout', (req, res) => {
         
         res.json({ success: true });
     });
-});
-
-// Serve admin-panel.html with authentication check
-app.get('/admin-panel.html', (req, res, next) => {
-    // Skip auth check for API requests
-    if (req.path.startsWith('/api/')) {
-        return next();
-    }
-    
-    // Check if user is authenticated
-    if (!req.session.authenticated) {
-        return res.redirect('/admin.html');
-    }
-    
-    // If authenticated, serve the admin panel
-    res.sendFile(path.join(__dirname, 'admin-panel.html'));
 });
 
 // Check auth status

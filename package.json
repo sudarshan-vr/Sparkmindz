@@ -10,6 +10,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "echo 'Build step complete'"
   },
+  "engines": {
+    "node": ">=14.x"
+  },
   "dependencies": {
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
