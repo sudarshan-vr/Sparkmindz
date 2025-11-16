@@ -54,7 +54,10 @@ if (process.env.NODE_ENV === 'production') {
 app.use(session(sessionConfig));
 
 // Serve static files from the public directory
-app.use(express.static('public', { 
+const staticPath = path.join(__dirname, 'public');
+console.log('Serving static files from:', staticPath);
+
+app.use(express.static(staticPath, { 
   extensions: ['html', 'htm'],
   setHeaders: (res, path) => {
     if (path.endsWith('.html')) {
@@ -67,23 +70,34 @@ app.use(express.static('public', {
 
 // Serve index.html for the root route
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(staticPath, 'index.html'));
 });
 
-// Special handling for admin-panel.html
-app.get('/admin-panel.html', (req, res, next) => {
-    // Bypass auth for API endpoints
-    if (req.path.startsWith('/api/')) {
-        return next();
-    }
-    
-    // Check if user is authenticated
-    if (!req.session.authenticated) {
-        return res.redirect('/admin.html');
-    }
-    
-    // Serve the admin panel if authenticated
-    res.sendFile(path.join(__dirname, 'admin-panel.html'));
+// Serve admin.html
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(staticPath, 'admin.html'));
+});
+
+// Serve admin-panel.html with authentication check
+app.get('/admin-panel', (req, res) => {
+  // Check if user is authenticated
+  if (!req.session || !req.session.authenticated) {
+    return res.redirect('/admin');
+  }
+  
+  // Serve the admin panel if authenticated
+  res.sendFile(path.join(staticPath, 'admin-panel.html'));
+});
+
+// Handle 404 - Must be after all other routes
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(staticPath, '404.html'));
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack);
+  res.status(500).send('Something broke!');
 });
 
 // Authentication middleware
