@@ -8,6 +8,10 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Log environment for debugging
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT:', PORT);
+
 // Middleware
 app.use(express.json());
 
@@ -53,11 +57,21 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(session(sessionConfig));
 
-// Serve static files from the public directory
-const staticPath = path.join(__dirname, 'public');
-console.log('Serving static files from:', staticPath);
+// Set up static file serving
+const publicPath = path.join(__dirname, 'public');
+console.log('Public directory path:', publicPath);
 
-app.use(express.static(staticPath, { 
+// Check if public directory exists
+fs.access(publicPath, fs.constants.F_OK, (err) => {
+  if (err) {
+    console.error('Public directory does not exist!');
+  } else {
+    console.log('Public directory found, serving static files from:', publicPath);
+  }
+});
+
+// Serve static files
+app.use(express.static(publicPath, {
   extensions: ['html', 'htm'],
   setHeaders: (res, path) => {
     if (path.endsWith('.html')) {
@@ -89,14 +103,44 @@ app.get('/admin-panel', (req, res) => {
   res.sendFile(path.join(staticPath, 'admin-panel.html'));
 });
 
+// API route for login
+app.post('/api/login', express.json(), (req, res) => {
+  const { password } = req.body;
+  
+  if (password === process.env.ADMIN_PASSWORD) {
+    req.session.authenticated = true;
+    return res.json({ success: true });
+  }
+  
+  res.status(401).json({ error: 'Invalid credentials' });
+});
+
+// API route to check auth status
+app.get('/api/check-auth', (req, res) => {
+  res.json({ 
+    authenticated: !!req.session.authenticated
+  });
+});
+
+// Logout route
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to log out' });
+    }
+    res.json({ success: true });
+  });
+});
+
 // Handle 404 - Must be after all other routes
 app.use((req, res) => {
-  res.status(404).sendFile(path.join(staticPath, '404.html'));
+  console.log('404 - Route not found:', req.path);
+  res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err.stack);
+  console.error('Server Error:', err.stack);
   res.status(500).send('Something broke!');
 });
 
